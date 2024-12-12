@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pymysql as pysql
 from dotenv import load_dotenv
 import os
@@ -133,6 +135,56 @@ def product_menu(cursor, db):
             break
         else:
             print("Invalid choice.Please enter option between 1 to 4.")
+
+#------------------------------> Code for order ---------------------------------->
+def add_order(cursor, db):
+    display_last_cust_id(cursor,db)
+    while True:
+        cust_id = input("Enter the customer id = ").strip()
+        cname = input("Enter the customer name = ").strip().capitalize()
+        cid = int(input("Enter the category id = "))
+        pid = int(input("Enter the prodcuct id = "))
+        qnty = int(input("Enter the total quantity = "))
+        unit_price = float(input("Enter the price = "))
+        total_bill = qnty * unit_price;
+        order_date = datetime.now()
+
+        cursor.execute("insert into orders(cust_id,cust_name,cid,pid,qnty,unit_price,total_bill,order_date) values(%s,%s,%s,%s,%s,%s,%s,%s)", (cust_id,cname, cid, pid,qnty,unit_price,total_bill,order_date))
+        commit_and_message(cursor, db, "Data inserted successfully")
+
+        if input("Do you want to add another product?yes/no = "):
+            break
+def display_last_cust_id(cursor,db):
+    cursor.execute("select cust_id from orders order by cust_id desc limit 1")
+    result = cursor.fetchone()[0]
+    # columns = ["Last Customer Number"]
+    # print(tabulate(result,tablefmt="psql",headers=columns,missingval="NA"))
+    print("Last Customer Number is = ",result)
+def display_bill(cursor,db):
+    cust_id =input("Enter customer id to print the bill = ")
+    cursor.execute(" select o.cust_name,o.qnty,o.total_bill,c.name,p.name from orders o join products p ON o.pid=p.pid join category c ON o.cid = c.id where cust_id=%s;",(cust_id))
+    result = cursor.fetchall()
+    result1 = cursor.fetchall()
+    columns = ["Customer Name","Qnty","total_bill","Category Name","Product Name"]
+    print(tabulate(result,tablefmt="psql",headers=columns,missingval="NA"))
+
+
+def order_menu(cursor, db):
+    while True:
+        print("\n Order Menu")
+        print("1. Add Order")
+        print("2. Bill Print")
+        print("3. Go to Main")
+
+        choice = input("Enter your choice = ")
+        if choice == "1":
+            add_order(cursor, db)
+        elif choice == "2":
+            display_bill(cursor,db)
+        elif choice == "3":
+            break
+        else:
+            print("Invalid choice.Please enter option between 1 to 4.")
 # -------------------------->Code for main menu------------------------------------>
 def main_menu():
     db = connect_db()
@@ -148,7 +200,8 @@ def main_menu():
             catetgory_menu(cursor, db)
         elif choice == '2':
             product_menu(cursor,db)
-
+        elif choice == '3':
+            order_menu(cursor,db)
         elif choice == '4':
             break
         else:
