@@ -1,9 +1,10 @@
 from datetime import datetime
-
 import pymysql as pysql
 from dotenv import load_dotenv
 import os
 from tabulate import tabulate
+from getpass import getpass
+import pyautogui
 
 load_dotenv()
 mypassword = os.getenv("db_password")
@@ -19,6 +20,18 @@ def commit_and_message(cursor, db, message):
 
 
 # -----------------------Add category code start here-------------------------------
+def login(cursor):
+    while True:
+        uname = input("Enter the username : = ")
+        upass = pyautogui.password(text='Enter password', title='Enter password', default='', mask='*')
+        cursor.execute("select * from user_login where uname=%s and upass=%s",(uname,upass))
+        user = cursor.fetchone()
+        if user:
+            print("Login success Welcome "+uname)
+            return True
+        else:
+            print("Invalid username and password. Please check try again")
+
 
 def add_category(cursor, db):
     while True:
@@ -48,11 +61,13 @@ def delete_category(cursor, db):
     commit_and_message(cursor, db, "One record deleted.")
     display_category(cursor, db)
 
+
 def display_category(cursor, db):
     cursor.execute("select * from category")
     result = cursor.fetchall()
     columns = ["Cid", "Category Name"]
     print(tabulate(result, tablefmt="psql", headers=columns, missingval="NA"))
+
 
 def catetgory_menu(cursor, db):
     while True:
@@ -89,17 +104,20 @@ def add_product(cursor, db):
         else:
             cursor.execute("insert into products(name,id,price) values(%s,%s,%s)", (pname, cid, price))
             commit_and_message(cursor, db, "Data inserted successfully")
-            display_products(cursor,db)
+            display_products(cursor, db)
             if input("Do you want to add another product?yes/no = "):
                 break
+
+
 def update_products(cursor, db):
     p_id = int(input("Enter the product id = "))
     updated_name = input("Enter the product name = ").strip().capitalize()
     updated_cid = int(input("Enter the category id = "))
     updated_price = float(input("Enter the price  = "))
-    cursor.execute("update products set name = %s, id=%s, price=%s where pid=%s", (updated_name,updated_cid,updated_price,p_id))
+    cursor.execute("update products set name = %s, id=%s, price=%s where pid=%s",
+                   (updated_name, updated_cid, updated_price, p_id))
     commit_and_message(cursor, db, "one product updated.")
-    display_products(cursor,db)
+    display_products(cursor, db)
 
 
 def delete_products(cursor, db):
@@ -108,11 +126,13 @@ def delete_products(cursor, db):
     commit_and_message(cursor, db, "One record deleted.")
     display_products(cursor, db)
 
-def display_products(cursor,db):
+
+def display_products(cursor, db):
     cursor.execute("select * from products")
     result = cursor.fetchall()
     columns = ["Pid", "Product Name", "Category Id", "Price"]
-    print(tabulate(result,tablefmt="psql",headers=columns,missingval="NA"))
+    print(tabulate(result, tablefmt="psql", headers=columns, missingval="NA"))
+
 
 def product_menu(cursor, db):
     while True:
@@ -136,9 +156,10 @@ def product_menu(cursor, db):
         else:
             print("Invalid choice.Please enter option between 1 to 4.")
 
-#------------------------------> Code for order ---------------------------------->
+
+# ------------------------------> Code for order ---------------------------------->
 def add_order(cursor, db):
-    display_last_cust_id(cursor,db)
+    display_last_cust_id(cursor, db)
     while True:
         cust_id = input("Enter the customer id = ").strip()
         cname = input("Enter the customer name = ").strip().capitalize()
@@ -149,24 +170,32 @@ def add_order(cursor, db):
         total_bill = qnty * unit_price;
         order_date = datetime.now()
 
-        cursor.execute("insert into orders(cust_id,cust_name,cid,pid,qnty,unit_price,total_bill,order_date) values(%s,%s,%s,%s,%s,%s,%s,%s)", (cust_id,cname, cid, pid,qnty,unit_price,total_bill,order_date))
+        cursor.execute(
+            "insert into orders(cust_id,cust_name,cid,pid,qnty,unit_price,total_bill,order_date) values(%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cust_id, cname, cid, pid, qnty, unit_price, total_bill, order_date))
         commit_and_message(cursor, db, "Data inserted successfully")
 
         if input("Do you want to add another product?yes/no = "):
             break
-def display_last_cust_id(cursor,db):
+
+
+def display_last_cust_id(cursor, db):
     cursor.execute("select cust_id from orders order by cust_id desc limit 1")
     result = cursor.fetchone()[0]
     # columns = ["Last Customer Number"]
     # print(tabulate(result,tablefmt="psql",headers=columns,missingval="NA"))
-    print("Last Customer Number is = ",result)
-def display_bill(cursor,db):
-    cust_id =input("Enter customer id to print the bill = ")
-    cursor.execute(" select o.cust_name,o.qnty,o.total_bill,c.name,p.name from orders o join products p ON o.pid=p.pid join category c ON o.cid = c.id where cust_id=%s;",(cust_id))
+    print("Last Customer Number is = ", result)
+
+
+def display_bill(cursor, db):
+    cust_id = input("Enter customer id to print the bill = ")
+    cursor.execute(
+        " select o.cust_name,o.qnty,o.total_bill,c.name,p.name from orders o join products p ON o.pid=p.pid join category c ON o.cid = c.id where cust_id=%s;",
+        (cust_id))
     result = cursor.fetchall()
-    result1 = cursor.fetchall()
-    columns = ["Customer Name","Qnty","total_bill","Category Name","Product Name"]
-    print(tabulate(result,tablefmt="psql",headers=columns,missingval="NA"))
+
+    columns = ["Customer Name", "Qnty", "total_bill", "Category Name", "Product Name"]
+    print(tabulate(result, tablefmt="psql", headers=columns, missingval="NA"))
 
 
 def order_menu(cursor, db):
@@ -180,15 +209,19 @@ def order_menu(cursor, db):
         if choice == "1":
             add_order(cursor, db)
         elif choice == "2":
-            display_bill(cursor,db)
+            display_bill(cursor, db)
         elif choice == "3":
             break
         else:
             print("Invalid choice.Please enter option between 1 to 4.")
+
+
 # -------------------------->Code for main menu------------------------------------>
 def main_menu():
     db = connect_db()
     cursor = db.cursor()
+    if not login(cursor):
+        return
     while True:
         print("\n Main Menu")
         print("1. Add Category")
@@ -199,9 +232,9 @@ def main_menu():
         if choice == '1':
             catetgory_menu(cursor, db)
         elif choice == '2':
-            product_menu(cursor,db)
+            product_menu(cursor, db)
         elif choice == '3':
-            order_menu(cursor,db)
+            order_menu(cursor, db)
         elif choice == '4':
             break
         else:
